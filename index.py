@@ -29,14 +29,14 @@ def conectar_bd():
 
 # Função para obter os códigos de estação
 def obter_codigos_estacao(conn):
-    query = "SELECT codigo_hidro FROM estacoes"
+    query = "SELECT id, codigo_hidro FROM estacoes"
     with conn.cursor() as cursor:
         cursor.execute(query)
-        resultados = [row[0] for row in cursor.fetchall()]
+        resultados = [{'id': row[0], 'codigo_hidro': row[1]} for row in cursor.fetchall()]
     return resultados
 
 # Função para chamar a API
-def chamar_api(codigo_estacao, data):
+def chamar_api(codigo_estacao, id_estacao, data):
     endpoints = [
         f"{API_BASE_URL}/api/v1/estacao-monitoramentos/telemetrica?codigo_estacao={codigo_estacao}&data={data}",
         f"{API_BASE_URL}/api/v1/estacao-monitoramentos/qualidade?codigo_estacao={codigo_estacao}&data={data}",
@@ -46,11 +46,11 @@ def chamar_api(codigo_estacao, data):
         try:
             response = requests.get(endpoint)
             if response.status_code == 200:
-                print(f"Sucesso: {endpoint}")
+                print(f"Sucesso (ID: {id_estacao}, Código: {codigo_estacao}): {endpoint}")
             else:
-                print(f"Falha ({response.status_code}): {endpoint}")
+                print(f"Falha (ID: {id_estacao}, Código: {codigo_estacao}, Status: {response.status_code}): {endpoint}")
         except Exception as e:
-            print(f"Erro ao chamar {endpoint}: {e}")
+            print(f"Erro ao chamar (ID: {id_estacao}, Código: {codigo_estacao}): {endpoint}. Erro: {e}")
 
 # Script principal
 def main():
@@ -58,16 +58,16 @@ def main():
         conn = conectar_bd()
         print("Conectado ao banco de dados com sucesso.")
 
-        codigos_estacao = obter_codigos_estacao(conn)
-        if not codigos_estacao:
-            print("Nenhum código encontrado na tabela 'estacoes'.")
+        estacoes = obter_codigos_estacao(conn)
+        if not estacoes:
+            print("Nenhuma estação encontrada na tabela 'estacoes'.")
             return
 
         # Data de hoje menos um dia
         data = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-        for codigo in codigos_estacao:
-            chamar_api(codigo, data)
+        for estacao in estacoes:
+            chamar_api(estacao['codigo_hidro'], estacao['id'], data)
 
     except Exception as e:
         print(f"Erro: {e}")
